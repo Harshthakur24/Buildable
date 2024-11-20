@@ -20,7 +20,7 @@ const OverlapCard = () => {
                                 <div className='aspect-auto bottom-0 top-auto left-0 right-0 absolute leading-[22px] font-semibold justify-end text-[18px] mb-[50px] w-[50%] text-center text-[#26253b59] '>{content.subtext}</div>
                             )}
                         </div>
-                        <div className={`flex w-[100%] items-center justify-center flex-col min-w-[50%] bg-[${content.CardBgColor}] rounded-tr-[80px]`}>
+                        <div className={`flex w-[100%] items-center justify-center flex-col min-w-[50%] rounded-tr-[80px]`} style={{ backgroundColor: content.CardBgColor}}>
                             <div className='flex h-[110%] w-[110%] items-center justify-center rounded-[20px]'>
                                 <iframe src={content.iframeSrc}
                                     className='h-[650px] w-[650px]'
