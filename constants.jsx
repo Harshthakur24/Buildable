@@ -1,3 +1,4 @@
+import { progress } from "framer-motion";
 
 const ListContent =[
     {
@@ -202,6 +203,85 @@ const ImagesForOL =[
     'https://res.cloudinary.com/superlist/image/upload/v1706228327/website/2023/misc/Jon_ts9dtj.webp',
     'https://res.cloudinary.com/superlist/image/upload/v1706228328/website/2023/misc/Stan_w0kqid.webp',
     'https://res.cloudinary.com/superlist/image/upload/v1706228327/website/2023/misc/Keyla_eaebye.webp'
-]
+];
 
-export {ListFooter, ListContent, SuperListColor, OverlapCardContent, RanksLinks, HSSideListContent, ImagesForOL};
+const HScontent = [
+    {
+        mark: true,
+        markColor: true,
+        title: "Launch readiness",
+        textColor: '#72718A',
+        progress: true,
+        twoStrips: true,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b303760c5a409c150729db_Ada_palmjc.webp']
+    },
+    {
+        mark: true,
+        markColor: true,
+        title: "Value proportion",
+        textColor: '#72718A',
+        progress: true,
+        twoStrips: false,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b303dbf9cefe4e3524ca84_Gmail_kbjswl.webp','https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b30376cfc91a74393dc2c4_Jon_ts9dtj.webp']
+    },
+    {
+        mark: true,
+        markColor: false,
+        title: "Marketing strategy",
+        textColor: '',
+        progress: false,
+        twoStrips: false,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b3033a157a61a0e0c349e1_Stan_w0kqid.webp'],
+    },
+    {
+        mark: true,
+        markColor: false,
+        title: "Design system update",
+        textColor: '',
+        progress: false,
+        twoStrips: false,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b303dbcc8a2e3777f50963_Linear_kf51lo.webp','https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b3037613ceae9d94346872_Jenna_vcsqbn.webp'],
+    },
+    {
+        mark: true,
+        markColor: false,
+        title: "Website design & dev",
+        textColor: '',
+        progress: false,
+        twoStrips: true,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b30376e03051f0ec98c136_Keyla_eaebye.webp'],
+    },
+    {
+        mark: true,
+        markColor: true,
+        title: "Pricing strategy",
+        textColor: '#72718A',
+        progress: true,
+        twoStrips: false,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65ce51c1b01c8a797334f0f5_Slack.png', 'https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b30376cfc91a74393dc2c4_Jon_ts9dtj.webp'], 
+    },
+    {
+        mark: true,
+        markColor: false,
+        title: "Prepare analytics",
+        textColor: "",
+        progress: false,
+        twoStrips: false,
+        images: ['https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b303760c5a409c150729db_Ada_palmjc.webp'],
+    }
+];
+
+
+const  HSFContent = {
+    title: "Home to",
+    subTItle: "all your",
+    highlightText: "lists",
+    descriptionDesktop: 'Take notes, organise your work, and get more done with AI. Simple, blazingly fast, and wrapped in a beautiful UI.',
+    descriptionMobile: 'For team work, personal projects, and everything in between.',
+    PBT1: "start today",
+    PBT2: "-- it's free",
+    secondaryButtonText: "Go Pro ✨",
+    imageSrc: "https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65036f273968fc089bdea9c6_dsfkgj.svg",
+}
+
+export {ListFooter, ListContent, SuperListColor, OverlapCardContent, RanksLinks, HSSideListContent, ImagesForOL,HScontent, HSFContent};

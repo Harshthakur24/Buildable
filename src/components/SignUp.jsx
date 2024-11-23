@@ -1,11 +1,9 @@
-import {motion,  useMotionValueEvent,  useScroll, useTransform } from 'framer-motion';
+import {motion,  useScroll, useTransform } from 'framer-motion';
 import React, { useState } from 'react'
 
 const SignUp = () => {
   const [hover, setHover] = useState("rgb(248,79,57)");
   const { scrollYProgress } = useScroll();
-  const [isHovered, setIsHovered] = useState(false);
-
 
   const scale = useTransform(scrollYProgress, [0.86, 0.92], [1, 0.75]);
   const borderRadius = useTransform(scrollYProgress, [0.85, 0.90], ["120px", "450px"]);
@@ -31,7 +29,7 @@ const SignUp = () => {
   }
 
   return (
-    <div className='bg-[#20202e] flex pb-[10vh] min-h-screen w-[100%] items-center justify-center'>
+    <div className='bg-[#20202e] flex flex-col pb-[10vh] min-h-screen w-[100%]  items-center justify-center'>
         <motion.div 
           style={{
             scale: scale,
@@ -40,7 +38,7 @@ const SignUp = () => {
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          className='min-h-[75vh] max-h-[600px] w-[100%] flex justify-center items-center text-[70px] text-center text-[#f8f8f8] font-semibold'>
+          className='max-h-[600px] gg:min-h-[80vh] mm:min-h-[70vh] ss:min-h-[300px] mm:w-[100%] ss:w-[300px] flex flex-col justify-center items-center leading-[55px] gg:text-[70px] ll:text-[50px] mm:text-[55px] text-center text-[#f8f8f8] font-semibold'>
             <div>Sign up for free</div>
         </motion.div>
     </div>

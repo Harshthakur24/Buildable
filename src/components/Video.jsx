@@ -1,24 +1,19 @@
 import React, { useRef } from 'react'
-import { motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 
 const Video = () => {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll();
 
-    useMotionValueEvent(scrollYProgress, 'change', (val) => {
-        console.log(val)
-    })
-
-    const scale = useTransform(scrollYProgress, [0.49, 0.545], [0.8,1]);
-    const borderRadius = useTransform(scrollYProgress,[0.49,0.545, 0.549], ['80px','80px','0px']);
+    const scale = useTransform(scrollYProgress, [0.49, 0.52, 0.557], [0.8,0.9,1]);
+    const borderRadius = useTransform(scrollYProgress,[0.49,0.53, 0.557], ['80px','80px','0px']);
 
   return (
     <motion.div
         ref={ref}
         style={{
             scale: scale,
-            transformOrigin: "center",
-            
+            transformOrigin: "center",  
         }}
         className='flex mt-[40px] items-center justify-center flex-col bg-[#fff]'>
         <div className='flex w-full h-full'>
