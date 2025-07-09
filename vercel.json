@@ -1,29 +1,15 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/[...all].js": {
+      "maxDuration": 10
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/api/[...all]"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/.*",
-      "dest": "/dist/index.html"
     }
   ]
 } 
