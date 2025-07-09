@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        String   @id @default(cuid())
+    email     String   @unique
+    name      String
+    password  String
+    avatar    String?
+    bio       String?
+    github    String?
+    website   String?
+    twitter   String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    projects Project[] @relation("UserProjects")
+    ratings  Rating[]
+
+    @@map("users")
+}
+
+model Project {
+    id          String   @id @default(cuid())
+    title       String
+    description String
+    category    String
+    status      String   @default("completed")
+    techStack   String   @default("[]")
+    images      String   @default("[]")
+    githubUrl   String?
+    demoUrl     String?
+    authorId    String
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    author  User     @relation("UserProjects", fields: [authorId], references: [id], onDelete: Cascade)
+    ratings Rating[]
+
+    @@map("projects")
+}
+
+model Rating {
+    id        String   @id @default(cuid())
+    rating    Int
+    comment   String?
+    userId    String
+    projectId String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+    // Constraints
+    @@unique([userId, projectId])
+    @@map("ratings")
+}

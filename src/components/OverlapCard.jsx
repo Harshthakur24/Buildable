@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { OverlapCardContent } from '../../constants'
 
 const OverlapCard = () => {

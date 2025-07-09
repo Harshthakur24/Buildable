@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 
 const Video = () => {
@@ -24,7 +24,7 @@ const Video = () => {
                         borderTopRightRadius: borderRadius,
                     }}
                     autoPlay muted loop playsInline className="w-full h-full">
-                    <source src="https://res.cloudinary.com/superlist/video/upload/v1714992773/website/superpowers/SuperList_Out_final_oxtb4t.webm" type="video/webm" />
+                    <source src="https://cdn.prod.website-files.com/625593a881b8ebd169835ca5/65b303760c5a409c150729db_Ada_palmjc.webp" type="video/webm" />
                 </motion.video>
             </a>
         </div>

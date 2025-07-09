@@ -1,5 +1,5 @@
 import {motion,  useScroll, useTransform } from 'framer-motion';
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 const SignUp = () => {
   const [hover, setHover] = useState("rgb(248,79,57)");
@@ -21,11 +21,10 @@ const SignUp = () => {
 
   const handleMouseEnter = () => {
     setHover(getRandomColor());
-    setIsHovered(true)
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
+    // No action needed
   }
 
   return (

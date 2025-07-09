@@ -1,30 +1,23 @@
-import Footer from "./components/Footer"
-import HeroSection from "./components/HeroSection"
-import HeroSection2 from "./components/HeroSection2"
-import List from "./components/List"
-import Navbar from "./components/Navbar"
-import OverlapCard from "./components/OverlapCard"
-import SignUp from "./components/SignUp"
-import Video from "./components/Video"
-
-
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Home from './pages/Home'
+import SignUp from './pages/SignUp'
+import Login from './pages/Login'
+import Profile from './pages/Profile'
+import SubmitProject from './pages/SubmitProject'
+import Settings from './pages/Settings'
 
 function App() {
-
-
   return (
-    <>
-      <main>
-        <Navbar />
-        <HeroSection />
-        <HeroSection2 />
-        <OverlapCard />
-        <Video/>
-        <List/>
-        <SignUp />
-        <Footer />
-      </main>
-    </>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/submit-project" element={<SubmitProject />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </Router>
   )
 }
 
