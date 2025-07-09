@@ -15,7 +15,8 @@
     "db:seed": "node server/utils/seedData.js",
     "server": "node server/index.js",
     "server:dev": "nodemon server/index.js",
-    "start": "nodemon server/index.js"
+    "start": "nodemon server/index.js",
+    "vercel-build": "npm run db:generate && npm run build"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
