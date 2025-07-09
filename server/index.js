@@ -20,6 +20,7 @@ import analyticsRoutes from './routes/analytics.js'
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js'
 import { notFound } from './middleware/notFound.js'
+import { databaseFallback } from './middleware/databaseFallback.js'
 
 // Get __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -87,6 +88,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(limiter)
 app.use('/api/auth', authLimiter)
 
+// Add database fallback middleware
+app.use(databaseFallback)
+
 // Serve static files from dist in production
 if (NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '..', 'dist')
@@ -96,14 +100,36 @@ if (NODE_ENV === 'production') {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 }
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Buildable API is running!',
-    timestamp: new Date().toISOString(),
-    environment: NODE_ENV
-  })
+// Health check with database status
+app.get('/health', async (req, res) => {
+  try {
+    // Try to check database connection
+    let dbStatus = 'unknown'
+    try {
+      const { PrismaClient } = await import('@prisma/client')
+      const prisma = new PrismaClient()
+      await prisma.$connect()
+      dbStatus = 'connected'
+      await prisma.$disconnect()
+    } catch (dbError) {
+      dbStatus = 'disconnected'
+      console.error('Database health check failed:', dbError.message)
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Buildable API is running!',
+      timestamp: new Date().toISOString(),
+      environment: NODE_ENV,
+      database: dbStatus
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Health check failed',
+      error: error.message
+    })
+  }
 })
 
 // API Documentation endpoint
@@ -124,19 +150,27 @@ app.get('/api', (req, res) => {
   })
 })
 
-// Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/projects', projectRoutes)
-app.use('/api/categories', categoryRoutes)
-app.use('/api/ratings', ratingRoutes)
-app.use('/api/upload', uploadRoutes)
-app.use('/api/analytics', analyticsRoutes)
+// Routes with error handling
+try {
+  app.use('/api/auth', authRoutes)
+  app.use('/api/users', userRoutes)
+  app.use('/api/projects', projectRoutes)
+  app.use('/api/categories', categoryRoutes)
+  app.use('/api/ratings', ratingRoutes)
+  app.use('/api/upload', uploadRoutes)
+  app.use('/api/analytics', analyticsRoutes)
+} catch (error) {
+  console.error('Error setting up routes:', error.message)
+}
 
 // Catch all handler: send back React's index.html file in production
 if (NODE_ENV === 'production') {
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'))
+    try {
+      res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'))
+    } catch {
+      res.status(500).json({ error: 'Failed to serve application' })
+    }
   })
 }
 
@@ -144,9 +178,10 @@ if (NODE_ENV === 'production') {
 app.use(notFound)
 app.use(errorHandler)
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`
+// Start server (only if not in serverless environment)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`
 🚀 Buildable Server started successfully!
 📍 Environment: ${NODE_ENV}
 🌐 Port: ${PORT}
@@ -154,7 +189,8 @@ app.listen(PORT, () => {
 ❤️  Health: http://localhost:${PORT}/health
 📚 Docs: http://localhost:${PORT}/api
 ${NODE_ENV === 'production' ? '🌍 Frontend: http://localhost:' + PORT : ''}
-  `)
-})
+    `)
+  })
+}
 
 export default app 
