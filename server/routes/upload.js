@@ -73,7 +73,7 @@ export const uploadImage = async (req, res, next) => {
     }
 
     // Construct file URL
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`
+    const baseUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 5000}`
     const fileUrl = `${baseUrl}/uploads/${type}/${req.file.filename}`
 
     res.status(200).json({
@@ -117,7 +117,7 @@ export const uploadMultipleImages = async (req, res, next) => {
     }
 
     // Process uploaded files
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`
+    const baseUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 5000}`
     const uploadedFiles = req.files.map(file => ({
       filename: file.filename,
       originalName: file.originalname,
@@ -208,7 +208,7 @@ export const getFileInfo = async (req, res, next) => {
 
     // Get file stats
     const stats = fs.statSync(filePath)
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`
+    const baseUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 5000}`
 
     res.status(200).json({
       success: true,
@@ -243,7 +243,7 @@ export const validateImageUrl = async (req, res, next) => {
     // Basic URL validation
     try {
       new URL(url)
-    } catch (error) {
+    } catch {
       return res.status(400).json({
         success: false,
         error: 'Invalid URL format'
