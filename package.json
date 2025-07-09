@@ -15,7 +15,7 @@
     "db:seed": "node server/utils/seedData.js",
     "server": "node server/index.js",
     "server:dev": "nodemon server/index.js",
-    "start": "node server/index.js"
+    "start": "nodemon server/index.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -49,6 +49,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
     "eslint": "^9.13.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
