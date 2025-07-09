@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.API_URL || 'http://localhost:5000/api',
+  baseURL: 'https://buildable-omega.vercel.app/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
