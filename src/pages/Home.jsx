@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { projectsAPI, ratingsAPI } from '../utils/api'
 import Footer from "../components/Footer"
 import HeroSection from "../components/HeroSection"
 import HeroSection2 from "../components/HeroSection2"
@@ -7,115 +9,89 @@ import Navbar from "../components/Navbar"
 import OverlapCard from "../components/OverlapCard"
 import ProjectSubmission from "../components/ProjectSubmission"
 import ProjectGallery from "../components/ProjectGallery"
-
-// Sample project data for demonstration
-const sampleProjects = [
-  {
-    id: "1",
-    title: "React Dashboard",
-    description: "A beautiful, responsive dashboard built with React and TypeScript. Features real-time data visualization, user management, and dark mode support.",
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop",
-    demoUrl: "https://react-dashboard-demo.com",
-    githubUrl: "https://github.com/user/react-dashboard",
-    techStack: ["React", "TypeScript", "Tailwind CSS", "Chart.js"],
-    featured: true,
-    published: true,
-    createdAt: new Date("2024-01-15"),
-    user: {
-      name: "Sarah Chen",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b002?w=64&h=64&fit=crop&crop=face"
-    },
-    ratings: [
-      { rating: 5, userId: "u1" },
-      { rating: 4, userId: "u2" },
-      { rating: 5, userId: "u3" }
-    ],
-    projectCategories: [
-      { category: { name: "Web Apps" } }
-    ]
-  },
-  {
-    id: "2",
-    title: "AI Image Generator",
-    description: "Generate stunning images from text prompts using cutting-edge AI models. Built with Python and deployed on the cloud.",
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=400&fit=crop",
-    demoUrl: "https://ai-image-gen.com",
-    githubUrl: "https://github.com/user/ai-image-generator",
-    techStack: ["Python", "FastAPI", "PyTorch", "Docker"],
-    featured: false,
-    published: true,
-    createdAt: new Date("2024-01-10"),
-    user: {
-      name: "Alex Rodriguez",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face"
-    },
-    ratings: [
-      { rating: 5, userId: "u1" },
-      { rating: 5, userId: "u2" }
-    ],
-    projectCategories: [
-      { category: { name: "AI/ML" } }
-    ]
-  },
-  {
-    id: "3",
-    title: "Mobile Weather App",
-    description: "A sleek weather app for iOS and Android with beautiful animations and accurate forecasts.",
-    image: "https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=600&h=400&fit=crop",
-    demoUrl: "https://weather-app-demo.com",
-    githubUrl: "https://github.com/user/weather-app",
-    techStack: ["React Native", "Expo", "Weather API"],
-    featured: false,
-    published: true,
-    createdAt: new Date("2024-01-05"),
-    user: {
-      name: "Maya Patel",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=64&h=64&fit=crop&crop=face"
-    },
-    ratings: [
-      { rating: 4, userId: "u1" },
-      { rating: 4, userId: "u2" },
-      { rating: 3, userId: "u3" }
-    ],
-    projectCategories: [
-      { category: { name: "Mobile Apps" } }
-    ]
-  },
-  {
-    id: "4",
-    title: "VSCode Theme Extension",
-    description: "A beautiful dark theme for Visual Studio Code with syntax highlighting optimized for modern web development.",
-    image: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=600&h=400&fit=crop",
-    demoUrl: null,
-    githubUrl: "https://github.com/user/vscode-theme",
-    techStack: ["JSON", "CSS", "JavaScript"],
-    featured: false,
-    published: true,
-    createdAt: new Date("2024-01-01"),
-    user: {
-      name: "David Kim",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face"
-    },
-    ratings: [
-      { rating: 5, userId: "u1" }
-    ],
-    projectCategories: [
-      { category: { name: "Developer Tools" } }
-    ]
-  }
-]
+import toast from 'react-hot-toast'
 
 const Home = () => {
   const { isAuthenticated } = useAuth()
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const handleProjectRate = (projectId, rating) => {
+  // Fetch projects from database
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await projectsAPI.getProjects()
+        setProjects(response.data || [])
+      } catch (err) {
+        console.error('Failed to fetch projects:', err)
+        setError('Failed to load projects. Please try again.')
+        toast.error('Failed to load projects')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
+  const handleProjectRate = async (projectId, rating) => {
     if (!isAuthenticated) {
-      // Navigate to login page instead of opening modal
+      toast.error('Please sign in to rate projects')
       window.location.href = '/login'
       return
     }
-    console.log(`Rating project ${projectId} with ${rating} stars`)
-    // TODO: Implement actual rating logic with API
+
+    try {
+      // Check if user has already rated this project
+      let isUpdate = false
+      try {
+        await ratingsAPI.getMyRating(projectId)
+        isUpdate = true
+      } catch {
+        // Rating doesn't exist, we'll create a new one
+        isUpdate = false
+      }
+
+      // Ensure rating is a number and valid range
+      const numericRating = Number(rating)
+      console.log('API call - Rating value:', numericRating, 'Type:', typeof numericRating)
+      
+      // Validate rating range
+      if (!numericRating || numericRating < 1 || numericRating > 5) {
+        toast.error('Invalid rating. Please select a rating between 1 and 5 stars.')
+        return
+      }
+      
+      // Submit rating
+      if (isUpdate) {
+        await ratingsAPI.updateRating(projectId, { rating: numericRating })
+        toast.success(`Updated rating to ${numericRating} star${numericRating !== 1 ? 's' : ''}!`)
+      } else {
+        await ratingsAPI.rateProject(projectId, { rating: numericRating })
+        toast.success(`Rated ${numericRating} star${numericRating !== 1 ? 's' : ''}!`)
+      }
+      
+      // Refresh projects to get updated ratings from server
+      const response = await projectsAPI.getProjects()
+      setProjects(response.data || [])
+      
+    } catch (err) {
+      console.error('Failed to rate project:', err)
+      
+      // Handle specific error messages
+      const errorMessage = err.response?.data?.error || 'Failed to submit rating. Please try again.'
+      
+      if (errorMessage.includes('cannot rate your own project')) {
+        toast.error('You cannot rate your own project')
+      } else if (errorMessage.includes('already rated')) {
+        toast.error('You have already rated this project')
+      } else {
+        toast.error(errorMessage)
+      }
+    }
   }
 
   return (
@@ -128,12 +104,13 @@ const Home = () => {
       {/* Project Gallery Section */}
       <div className="bg-gray-50 py-16">
         <ProjectGallery 
-          projects={sampleProjects}
+          projects={projects}
           onProjectRate={handleProjectRate}
+          loading={loading}
+          error={error}
         />
       </div>
       
-      {/* <Video/> */}
       <List/>
       <ProjectSubmission />
       <Footer />

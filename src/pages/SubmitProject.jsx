@@ -3,8 +3,10 @@ import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Github, Globe, Image, X, Plus, Send, Tags } from 'lucide-react'
+import { ArrowLeft, Github, Globe, Upload, X, Plus, Send, Tags, Loader } from 'lucide-react'
 import { api } from '../utils/api'
+import { uploadToCloudinary } from '../utils/cloudinary'
+import toast from 'react-hot-toast'
 
 const SubmitProject = () => {
   const { isAuthenticated } = useAuth()
@@ -14,7 +16,7 @@ const SubmitProject = () => {
   const [techStack, setTechStack] = useState([])
   const [currentTech, setCurrentTech] = useState('')
   const [images, setImages] = useState([])
-  const [currentImage, setCurrentImage] = useState('')
+  const [uploadingImages, setUploadingImages] = useState([])
 
   const {
     register,
@@ -52,15 +54,101 @@ const SubmitProject = () => {
     setTechStack(techStack.filter(t => t !== tech))
   }
 
-  const addImage = () => {
-    if (currentImage.trim() && !images.includes(currentImage.trim())) {
-      setImages([...images, currentImage.trim()])
-      setCurrentImage('')
+  const handleImageUpload = async (event) => {
+    const files = Array.from(event.target.files)
+    if (files.length === 0) return
+
+    // Validate file types and sizes
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/')
+      const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB limit for Cloudinary
+      
+      if (!isValidType) {
+        toast.error(`${file.name} is not a valid image file`)
+        return false
+      }
+      if (!isValidSize) {
+        toast.error(`${file.name} is too large. Maximum size is 10MB`)
+        return false
+      }
+      return true
+    })
+
+    if (validFiles.length === 0) return
+
+    // Add files to uploading state with preview
+    const fileObjects = validFiles.map(file => ({
+      id: Date.now() + Math.random(),
+      file,
+      preview: URL.createObjectURL(file),
+      progress: 0,
+      status: 'uploading' // uploading, completed, error
+    }))
+
+    setUploadingImages(prev => [...prev, ...fileObjects])
+
+    // Upload each file to Cloudinary
+    for (const fileObj of fileObjects) {
+      try {
+        const response = await uploadToCloudinary(fileObj.file, (progress) => {
+          setUploadingImages(prev => prev.map(img => 
+            img.id === fileObj.id 
+              ? { ...img, progress }
+              : img
+          ))
+        })
+
+        // Update to completed
+        setUploadingImages(prev => prev.map(img => 
+          img.id === fileObj.id 
+            ? { ...img, progress: 100, status: 'completed', url: response.url }
+            : img
+        ))
+
+        // Add to images array
+        setImages(prev => [...prev, response.url])
+
+        toast.success(`${fileObj.file.name} uploaded to Cloudinary successfully!`)
+
+        // Remove from uploading after a delay
+        setTimeout(() => {
+          setUploadingImages(prev => prev.filter(img => img.id !== fileObj.id))
+          URL.revokeObjectURL(fileObj.preview)
+        }, 1000)
+
+      } catch (error) {
+        console.error('Cloudinary upload failed:', error)
+        
+        setUploadingImages(prev => prev.map(img => 
+          img.id === fileObj.id 
+            ? { ...img, status: 'error', progress: 0 }
+            : img
+        ))
+
+        toast.error(`Failed to upload ${fileObj.file.name} to Cloudinary`)
+
+        // Remove failed upload after delay
+        setTimeout(() => {
+          setUploadingImages(prev => prev.filter(img => img.id !== fileObj.id))
+          URL.revokeObjectURL(fileObj.preview)
+        }, 3000)
+      }
     }
+
+    // Clear the input
+    event.target.value = ''
   }
 
-  const removeImage = (image) => {
-    setImages(images.filter(img => img !== image))
+  const removeImage = (imageUrl) => {
+    setImages(images.filter(img => img !== imageUrl))
+  }
+
+  const removeUploadingImage = (id) => {
+    const imgToRemove = uploadingImages.find(img => img.id === id)
+    if (imgToRemove) {
+      URL.revokeObjectURL(imgToRemove.preview)
+    }
+    setUploadingImages(prev => prev.filter(img => img.id !== id))
   }
 
   const onSubmit = async (data) => {
@@ -299,46 +387,115 @@ const SubmitProject = () => {
                 <h3 className="text-xl font-bold text-[#26253b] mb-4">Project Images</h3>
                 
                 <div className="space-y-4">
-                  <div className="flex gap-2">
+                  {/* File Upload Area */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#f84f39] transition-colors">
                     <input
-                      type="url"
-                      value={currentImage}
-                      onChange={(e) => setCurrentImage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addImage())}
-                      placeholder="Add image URL"
-                      className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#f84f39] focus:border-transparent transition-all text-[#26253b]"
+                      type="file"
+                      id="image-upload"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={addImage}
-                      className="px-4 py-3 bg-[#f84f39] text-white rounded-xl hover:bg-[#d63027] transition-colors flex items-center gap-2"
+                    <label
+                      htmlFor="image-upload"
+                      className="cursor-pointer flex flex-col items-center gap-4"
                     >
-                      <Image className="w-4 h-4" />
-                      Add
-                    </button>
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold text-gray-700 mb-1">
+                          Choose images or drag and drop
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          PNG, JPG, GIF up to 10MB each (uploaded to Cloudinary)
+                        </p>
+                      </div>
+                      
+                    </label>
                   </div>
+
+                  {/* Uploading Images */}
+                  {uploadingImages.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-gray-700">Uploading...</h4>
+                      <div className="space-y-2">
+                        {uploadingImages.map((uploadImg) => (
+                          <div key={uploadImg.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <img
+                              src={uploadImg.preview}
+                              alt="Upload preview"
+                              className="w-12 h-12 object-cover rounded"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700 truncate">
+                                {uploadImg.file.name}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full transition-all duration-300 ${
+                                      uploadImg.status === 'error' 
+                                        ? 'bg-red-500' 
+                                        : uploadImg.status === 'completed'
+                                        ? 'bg-green-500'
+                                        : 'bg-[#f84f39]'
+                                    }`}
+                                    style={{ width: `${uploadImg.progress}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {uploadImg.status === 'error' 
+                                    ? 'Failed' 
+                                    : uploadImg.status === 'completed'
+                                    ? 'Done'
+                                    : `${uploadImg.progress}%`
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                            {uploadImg.status === 'uploading' && (
+                              <Loader className="w-4 h-4 text-[#f84f39] animate-spin" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeUploadingImage(uploadImg.id)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
+                  {/* Uploaded Images */}
                   {images.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {images.map((image, index) => (
-                        <div key={index} className="relative group">
-                          <img 
-                            src={image} 
-                            alt={`Project image ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                            onError={(e) => {
-                              e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(image)}
-                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-gray-700">Project Images ({images.length})</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img 
+                              src={image} 
+                              alt={`Project image ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                              onError={(e) => {
+                                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(image)}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -364,13 +521,18 @@ const SubmitProject = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadingImages.some(img => img.status === 'uploading')}
                 className="w-full bg-[#f84f39] text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-[#d63027] focus:outline-none focus:ring-2 focus:ring-[#f84f39] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Submitting...
+                  </>
+                ) : uploadingImages.some(img => img.status === 'uploading') ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Uploading Images...
                   </>
                 ) : (
                   <>

@@ -122,18 +122,45 @@ export const projectsAPI = {
 
 // Ratings API functions
 export const ratingsAPI = {
-  rateProject: async (projectId, rating) => {
-    const response = await api.post('/ratings', { projectId, rating })
+  // Get project rating summary with distribution
+  getProjectSummary: async (projectId) => {
+    const response = await api.get(`/ratings/project/${projectId}/summary`)
     return response.data
   },
 
-  getProjectRatings: async (projectId) => {
-    const response = await api.get(`/ratings/project/${projectId}`)
+  // Get ratings for a project with pagination
+  getProjectRatings: async (projectId, params = {}) => {
+    const response = await api.get(`/ratings/project/${projectId}`, { params })
     return response.data
   },
 
-  getUserRatings: async (userId) => {
-    const response = await api.get(`/ratings/user/${userId}`)
+  // Rate a project
+  rateProject: async (projectId, ratingData) => {
+    const response = await api.post(`/ratings/project/${projectId}`, ratingData)
+    return response.data
+  },
+
+  // Update a rating
+  updateRating: async (projectId, ratingData) => {
+    const response = await api.put(`/ratings/project/${projectId}`, ratingData)
+    return response.data
+  },
+
+  // Delete a rating
+  deleteRating: async (projectId) => {
+    const response = await api.delete(`/ratings/project/${projectId}`)
+    return response.data
+  },
+
+  // Get user's rating for a project
+  getMyRating: async (projectId) => {
+    const response = await api.get(`/ratings/project/${projectId}/my-rating`)
+    return response.data
+  },
+
+  // Get all ratings by current user
+  getMyRatings: async (params = {}) => {
+    const response = await api.get('/ratings/my-ratings', { params })
     return response.data
   },
 }
