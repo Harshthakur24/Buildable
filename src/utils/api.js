@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'https://buildable-omega.vercel.app/api',
+  baseURL: 'https://buildable-server.onrender.com/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -196,6 +196,4 @@ export const tokenUtils = {
   isAuthenticated: () => !!localStorage.getItem('authToken'),
 }
 
-// Export the api instance
 export { api }
-export default api 
