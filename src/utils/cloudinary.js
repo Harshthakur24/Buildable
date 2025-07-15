@@ -1,67 +1,54 @@
-// Cloudinary upload utility
-import { cloudinaryConfig } from '../config/cloudinary'
-
+// Cloudinary upload utility through backend
 export const uploadToCloudinary = async (file, onProgress) => {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('upload_preset', cloudinaryConfig.uploadPreset)
-  
-  try {
+  return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    
-    return new Promise((resolve, reject) => {
-      // Track upload progress
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable && onProgress) {
-          const progress = Math.round((event.loaded / event.total) * 100)
-          onProgress(progress)
-        }
-      })
-      
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
+    const formData = new FormData()
+    formData.append('image', file)
+
+    // Setup upload progress handler
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        const progress = (e.loaded / e.total) * 100
+        onProgress(progress)
+      }
+    }
+
+    // Setup completion handler
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try {
           const response = JSON.parse(xhr.responseText)
-          resolve({
-            url: response.secure_url,
-            publicId: response.public_id,
-            width: response.width,
-            height: response.height
-          })
-        } else {
-          reject(new Error(`Upload failed with status: ${xhr.status}`))
+          if (response.success) {
+            resolve(response.data)
+          } else {
+            reject(new Error(response.error || 'Upload failed'))
+          }
+        } catch (error) {
+          reject(new Error(`Invalid response from server: ${error.message}`))
         }
-      })
-      
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'))
-      })
-      
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`)
-      xhr.send(formData)
-    })
-  } catch (error) {
-    throw new Error(`Upload failed: ${error.message}`)
-  }
+      } else {
+        reject(new Error(`Upload Failed: ${xhr.statusText}`))
+      }
+    }
+
+    // Setup error handler
+    xhr.onerror = () => reject(new Error('Network error occurred'))
+
+    // Send the request
+    xhr.open('POST', '/api/upload/projects')
+    xhr.send(formData)
+  })
 }
 
 // Helper function to extract public ID from Cloudinary URL
-export const getPublicIdFromUrl = (url) => {
+export const getPublicId = (url) => {
+  if (!url) return null
   const parts = url.split('/')
-  const filename = parts[parts.length - 1]
-  return filename.split('.')[0]
+  return parts[parts.length - 1].split('.')[0]
 }
 
-// Helper function to generate optimized Cloudinary URLs
-export const getOptimizedImageUrl = (url, options = {}) => {
-  const {
-    width = 'auto',
-    quality = 'auto',
-    format = 'auto',
-    crop = 'scale'
-  } = options
-  
-  // Extract public ID from URL
-  const publicId = getPublicIdFromUrl(url)
-  
-  return `https://res.cloudinary.com/${cloudinaryConfig.cloudName}/image/upload/w_${width},q_${quality},f_${format},c_${crop}/${publicId}`
+// Helper function to get the original URL
+export const getOptimizedImageUrl = (url) => {
+  if (!url) return null
+  return url // Return original URL since optimization is now handled by backend
 } 

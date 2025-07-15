@@ -31,14 +31,14 @@ const HeroSection = () => {
         </div>
         <div className='flex mb-[60px] min-h-[62px] max-w-[900px] items-center justify-center flex-row gap-[15px] w-11/12'>
             <Link 
-                to="/signup"
+                to="/submit-project"
                 className='text-[#f4f3f8] whitespace-nowrap break-keep bg-[#f84f39] rounded-[600px] px-[30px] py-[10px] text-[20px] font-semibold transition-all duration-200 ease-in-out hover:bg-[#d63027] cursor-pointer inline-block'
             >
                 {HSFContent.PBT1}
                 <span className=''>{HSFContent.PBT2}</span>
             </Link>
             <Link 
-                to="/login"
+                to="/explore"
                 className='transition-all duration-200 ease-in-out font-semibold text-[20px] py-[10px] rounded-[60px] text-[#f4f3f8] bg-[#6b66da] items-center justify-center pl-[30px] pr-[25px] hover:bg-[#5753c9] cursor-pointer inline-block'
             >
                 {HSFContent.secondaryButtonText}

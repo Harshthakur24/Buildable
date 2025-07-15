@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'https://buildable-server.onrender.com/api',
+  baseURL: import.meta.env.VITE_BACKEND_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

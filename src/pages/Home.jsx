@@ -17,7 +17,6 @@ const Home = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Fetch projects from database
   useEffect(() => {
     const fetchProjects = async () => {
       try {

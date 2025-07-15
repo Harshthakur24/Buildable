@@ -1,4 +1,3 @@
-import React from 'react'
 import { RanksLinks } from '../../constants'
 
 const Rank = () => {

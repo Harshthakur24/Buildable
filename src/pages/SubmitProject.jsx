@@ -27,20 +27,7 @@ const SubmitProject = () => {
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#f4f3fa] flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-[#26253b] mb-4">Authentication Required</h2>
-          <p className="text-[#72718a] mb-6">Please sign in to submit a project.</p>
-          <Link 
-            to="/login"
-            className="bg-[#f84f39] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#d63027] transition-colors"
-          >
-            Sign In
-          </Link>
-        </div>
-      </div>
-    )
+    navigate('/login')
   }
 
   const addTech = () => {

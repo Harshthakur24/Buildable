@@ -26,10 +26,10 @@ const Navbar = () => {
                 </div>
                 <div className='hidden m:block'>
                   <div className='flex gap-[25px] '>
-                    <h2 className='hidden l:block cursor-pointer hover:text-[#f84f39] transition-colors'>Explore</h2>
-                    <h2 className='cursor-pointer hover:text-[#f84f39] transition-colors'>Projects</h2>
-                    <h2 className='cursor-pointer hover:text-[#f84f39] transition-colors'>Leaderboard</h2>
-                    <h2 className='cursor-pointer hover:text-[#f84f39] transition-colors'>Categories</h2>
+                    <Link to="/explore" className='hidden l:block cursor-pointer hover:text-[#f84f39] transition-colors'>Explore</Link>
+                    <Link to="/projects" className='cursor-pointer hover:text-[#f84f39] transition-colors'>Projects</Link>
+                    <Link to="/leaderboard" className='cursor-pointer hover:text-[#f84f39] transition-colors'>Leaderboard</Link>
+                    
                   </div>
                 </div>
             </div>
