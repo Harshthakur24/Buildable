@@ -472,9 +472,9 @@ const Explore = () => {
                         🏆 Project of the Week
                       </div>
                     </div>
-                    {featuredContent.project?.image && (
+                    {(featuredContent.project?.profileImage || featuredContent.project?.image) && (
                       <img 
-                        src={featuredContent.project.image} 
+                        src={featuredContent.project.profileImage || featuredContent.project.image} 
                         alt={featuredContent.project.title}
                         className="w-full h-full object-cover"
                       />

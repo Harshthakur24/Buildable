@@ -20,10 +20,12 @@ const Navbar = () => {
         <div className='p-[8px] l:p-[2px] bg-[#f84f39] '></div>
         <nav className='outer_padding flex px-[40px] m:pt-[24px] pb-[25px] w-full min-h-[70px] items-center justify-between bg-[#f4f3fa]'>
             <div className='leftFlex flex items-center justify-center gap-[25px] font-semibold'>
+              <Link to="/">
                 <div className='flex items-center gap-[20px]'>
                     <div className='w-[25px] h-[25px] bg-[#f84f39] rounded-lg flex items-center justify-center text-white font-bold text-sm'>B</div>
                     <div className='text-xl font-bold text-[#26253b]'>Buildable</div>
                 </div>
+              </Link>
                 <div className='hidden m:block'>
                   <div className='flex gap-[25px] '>
                     <Link to="/explore" className='hidden l:block cursor-pointer hover:text-[#f84f39] transition-colors'>Explore</Link>

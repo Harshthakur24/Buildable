@@ -192,19 +192,19 @@ const Leaderboard = () => {
         </div>
       )}
       
-      {/* Project Image */}
-      <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-        {project.image ? (
-          <img 
-            src={project.image} 
-            alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Code className="w-16 h-16 text-gray-400" />
-          </div>
-        )}
+              {/* Project Image */}
+        <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+          {(project.profileImage || project.image) ? (
+            <img 
+              src={project.profileImage || project.image} 
+              alt={project.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Code className="w-16 h-16 text-gray-400" />
+            </div>
+          )}
         
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

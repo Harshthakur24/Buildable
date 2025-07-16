@@ -102,7 +102,7 @@ const BuildableFooter = {
         text: "New Rating System & Project Categories",
         version: 'v 2.0.0',
     },
-    copyright: "ⓒ Buildable 2024",
+    copyright: "ⓒ Buildable 2025",
 }
 
 // Platform features for OverlapCard component

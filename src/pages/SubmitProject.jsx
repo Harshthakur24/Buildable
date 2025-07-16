@@ -1,34 +1,85 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Github, Globe, Upload, X, Plus, Send, Tags, Loader } from 'lucide-react'
 import { api } from '../utils/api'
 import { uploadToCloudinary } from '../utils/cloudinary'
+import { projectsAPI } from '../utils/api'
 import toast from 'react-hot-toast'
 
 const SubmitProject = () => {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const editProjectId = searchParams.get('edit')
+  const isEditMode = !!editProjectId
+  
   const [loading, setLoading] = useState(false)
+  const [loadingProject, setLoadingProject] = useState(isEditMode)
   const [message, setMessage] = useState('')
   const [techStack, setTechStack] = useState([])
   const [currentTech, setCurrentTech] = useState('')
-  const [images, setImages] = useState([])
-  const [uploadingImages, setUploadingImages] = useState([])
+  const [projectImage, setProjectImage] = useState('') // Changed from images array to single image
+  const [uploadingImage, setUploadingImage] = useState(null) // Changed from array to single object
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
+    setValue
   } = useForm()
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
     navigate('/login')
   }
+
+  // Fetch project data for editing
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!isEditMode || !editProjectId) {
+        setLoadingProject(false)
+        return
+      }
+
+      try {
+        setLoadingProject(true)
+        const response = await projectsAPI.getProject(editProjectId)
+        const project = response.data
+
+        // Pre-fill form fields
+        setValue('title', project.title || '')
+        setValue('description', project.description || '')
+        setValue('githubUrl', project.githubUrl || '')
+        setValue('demoUrl', project.demoUrl || '')
+        setValue('category', project.category || '')
+        
+        // Pre-fill tech stack
+        setTechStack(project.techStack || [])
+        
+        // Pre-fill project image (use profileImage from backend)
+        if (project.profileImage) {
+          setProjectImage(project.profileImage)
+        } else if (project.images && Array.isArray(project.images) && project.images.length > 0) {
+          setProjectImage(project.images[0])
+        } else if (project.image) {
+          setProjectImage(project.image)
+        }
+
+      } catch (error) {
+        console.error('Failed to fetch project:', error)
+        toast.error('Failed to load project data')
+        navigate('/profile')
+      } finally {
+        setLoadingProject(false)
+      }
+    }
+
+    fetchProject()
+  }, [isEditMode, editProjectId, setValue, navigate])
 
   const addTech = () => {
     if (currentTech.trim() && !techStack.includes(currentTech.trim())) {
@@ -42,100 +93,82 @@ const SubmitProject = () => {
   }
 
   const handleImageUpload = async (event) => {
-    const files = Array.from(event.target.files)
-    if (files.length === 0) return
+    const file = event.target.files[0]
+    if (!file) return
 
-    // Validate file types and sizes
-    const validFiles = files.filter(file => {
-      const isValidType = file.type.startsWith('image/')
-      const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB limit for Cloudinary
-      
-      if (!isValidType) {
-        toast.error(`${file.name} is not a valid image file`)
-        return false
-      }
-      if (!isValidSize) {
-        toast.error(`${file.name} is too large. Maximum size is 10MB`)
-        return false
-      }
-      return true
-    })
+    // If there's already an image, replace it
+    if (projectImage) {
+      setProjectImage('')
+    }
 
-    if (validFiles.length === 0) return
+    // Validate file type and size
+    const isValidType = file.type.startsWith('image/')
+    const isValidSize = file.size <= 10 * 1024 * 1024 // 10MB limit
 
-    // Add files to uploading state with preview
-    const fileObjects = validFiles.map(file => ({
-      id: Date.now() + Math.random(),
+    if (!isValidType) {
+      toast.error(`${file.name} is not a valid image file`)
+      return
+    }
+    if (!isValidSize) {
+      toast.error(`${file.name} is too large. Maximum size is 10MB`)
+      return
+    }
+
+    // Create upload object
+    const uploadObj = {
+      id: Date.now(),
       file,
       preview: URL.createObjectURL(file),
       progress: 0,
-      status: 'uploading' // uploading, completed, error
-    }))
+      status: 'uploading'
+    }
 
-    setUploadingImages(prev => [...prev, ...fileObjects])
+    setUploadingImage(uploadObj)
 
-    // Upload each file to Cloudinary
-    for (const fileObj of fileObjects) {
-      try {
-        const response = await uploadToCloudinary(fileObj.file, (progress) => {
-          setUploadingImages(prev => prev.map(img => 
-            img.id === fileObj.id 
-              ? { ...img, progress }
-              : img
-          ))
-        })
+    try {
+      const response = await uploadToCloudinary(file, (progress) => {
+        setUploadingImage(prev => prev ? { ...prev, progress } : null)
+      })
 
-        // Update to completed
-        setUploadingImages(prev => prev.map(img => 
-          img.id === fileObj.id 
-            ? { ...img, progress: 100, status: 'completed', url: response.url }
-            : img
-        ))
+      // Update to completed
+      setUploadingImage(prev => prev ? { ...prev, progress: 100, status: 'completed', url: response.url } : null)
 
-        // Add to images array
-        setImages(prev => [...prev, response.url])
+      // Set the project image
+      setProjectImage(response.url)
+      toast.success(`${file.name} uploaded successfully!`)
 
-        toast.success(`${fileObj.file.name} uploaded to Cloudinary successfully!`)
+      // Remove from uploading after a delay
+      setTimeout(() => {
+        setUploadingImage(null)
+        URL.revokeObjectURL(uploadObj.preview)
+      }, 1000)
 
-        // Remove from uploading after a delay
-        setTimeout(() => {
-          setUploadingImages(prev => prev.filter(img => img.id !== fileObj.id))
-          URL.revokeObjectURL(fileObj.preview)
-        }, 1000)
+    } catch (error) {
+      console.error('Cloudinary upload failed:', error)
+      
+      setUploadingImage(prev => prev ? { ...prev, status: 'error', progress: 0 } : null)
+      toast.error(`Failed to upload ${file.name}`)
 
-      } catch (error) {
-        console.error('Cloudinary upload failed:', error)
-        
-        setUploadingImages(prev => prev.map(img => 
-          img.id === fileObj.id 
-            ? { ...img, status: 'error', progress: 0 }
-            : img
-        ))
-
-        toast.error(`Failed to upload ${fileObj.file.name} to Cloudinary`)
-
-        // Remove failed upload after delay
-        setTimeout(() => {
-          setUploadingImages(prev => prev.filter(img => img.id !== fileObj.id))
-          URL.revokeObjectURL(fileObj.preview)
-        }, 3000)
-      }
+      // Remove failed upload after delay
+      setTimeout(() => {
+        setUploadingImage(null)
+        URL.revokeObjectURL(uploadObj.preview)
+      }, 3000)
     }
 
     // Clear the input
     event.target.value = ''
   }
 
-  const removeImage = (imageUrl) => {
-    setImages(images.filter(img => img !== imageUrl))
+  const removeImage = () => {
+    setProjectImage('')
   }
 
-  const removeUploadingImage = (id) => {
-    const imgToRemove = uploadingImages.find(img => img.id === id)
-    if (imgToRemove) {
-      URL.revokeObjectURL(imgToRemove.preview)
+  const removeUploadingImage = () => {
+    if (uploadingImage) {
+      URL.revokeObjectURL(uploadingImage.preview)
+      setUploadingImage(null)
     }
-    setUploadingImages(prev => prev.filter(img => img.id !== id))
   }
 
   const onSubmit = async (data) => {
@@ -146,26 +179,50 @@ const SubmitProject = () => {
       const projectData = {
         ...data,
         techStack,
-        images
+        profileImage: projectImage // Send as profileImage to match backend schema
       }
-      
-      const response = await api.post('/projects', projectData)
+
+      let response
+      if (isEditMode) {
+        response = await projectsAPI.updateProject(editProjectId, projectData)
+        toast.success('Project updated successfully!')
+      } else {
+        response = await api.post('/projects', projectData)
+        toast.success('Project submitted successfully!')
+      }
       
       if (response.data.success) {
-        setMessage('Project submitted successfully!')
-        reset()
-        setTechStack([])
-        setImages([])
+        setMessage(`Project ${isEditMode ? 'updated' : 'submitted'} successfully! Redirecting...`)
         setTimeout(() => {
-          navigate('/')
+          navigate('/profile')
         }, 2000)
+        
+        if (!isEditMode) {
+          reset()
+          setTechStack([])
+          setProjectImage('')
+        }
       }
     } catch (error) {
-      setMessage(error.response?.data?.error || 'Failed to submit project')
+      const errorMessage = error.response?.data?.error || `Failed to ${isEditMode ? 'update' : 'submit'} project`
+      setMessage(errorMessage)
+      toast.error(errorMessage)
       setTimeout(() => setMessage(''), 5000)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading spinner while fetching project data
+  if (loadingProject) {
+    return (
+      <div className="min-h-screen bg-[#f4f3fa] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#f84f39] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#72718a]">Loading project data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -178,11 +235,11 @@ const SubmitProject = () => {
           <div className="text-xl font-bold text-[#26253b]">Buildable</div>
         </Link>
         <Link 
-          to="/" 
+          to="/profile" 
           className="flex items-center gap-2 text-[#72718a] hover:text-[#f84f39] transition-colors font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Home
+          Back to Profile
         </Link>
       </nav>
 
@@ -201,7 +258,7 @@ const SubmitProject = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-4xl font-bold text-[#26253b] mb-4"
             >
-              Submit Your Project
+              {isEditMode ? 'Edit Your Project' : 'Submit Your Project'}
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
@@ -209,7 +266,10 @@ const SubmitProject = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-[#72718a] text-lg"
             >
-              Share your amazing work with the Buildable community
+              {isEditMode 
+                ? 'Update your project information and showcase your latest work'
+                : 'Share your amazing work with the Buildable community'
+              }
             </motion.p>
           </div>
 
@@ -369,9 +429,9 @@ const SubmitProject = () => {
                 </div>
               </div>
 
-              {/* Images */}
+              {/* Project Image */}
               <div>
-                <h3 className="text-xl font-bold text-[#26253b] mb-4">Project Images</h3>
+                <h3 className="text-xl font-bold text-[#26253b] mb-4">Project Image</h3>
                 
                 <div className="space-y-4">
                   {/* File Upload Area */}
@@ -379,7 +439,6 @@ const SubmitProject = () => {
                     <input
                       type="file"
                       id="image-upload"
-                      multiple
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
@@ -393,96 +452,87 @@ const SubmitProject = () => {
                       </div>
                       <div>
                         <p className="text-lg font-semibold text-gray-700 mb-1">
-                          Choose images or drag and drop
+                          Choose an image or drag and drop
                         </p>
                         <p className="text-sm text-gray-500">
-                          PNG, JPG, GIF up to 10MB each (uploaded to Cloudinary)
+                          PNG, JPG, GIF up to 10MB (uploaded to Cloudinary)
                         </p>
                       </div>
                       
                     </label>
                   </div>
 
-                  {/* Uploading Images */}
-                  {uploadingImages.length > 0 && (
+                  {/* Uploading Image */}
+                  {uploadingImage && (
                     <div className="space-y-3">
                       <h4 className="text-sm font-semibold text-gray-700">Uploading...</h4>
                       <div className="space-y-2">
-                        {uploadingImages.map((uploadImg) => (
-                          <div key={uploadImg.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <img
-                              src={uploadImg.preview}
-                              alt="Upload preview"
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-700 truncate">
-                                {uploadImg.file.name}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                      uploadImg.status === 'error' 
-                                        ? 'bg-red-500' 
-                                        : uploadImg.status === 'completed'
-                                        ? 'bg-green-500'
-                                        : 'bg-[#f84f39]'
-                                    }`}
-                                    style={{ width: `${uploadImg.progress}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-xs text-gray-500">
-                                  {uploadImg.status === 'error' 
-                                    ? 'Failed' 
-                                    : uploadImg.status === 'completed'
-                                    ? 'Done'
-                                    : `${uploadImg.progress}%`
-                                  }
-                                </span>
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <img
+                            src={uploadingImage.preview}
+                            alt="Upload preview"
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700 truncate">
+                              {uploadingImage.file.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                    uploadingImage.status === 'error' 
+                                      ? 'bg-red-500' 
+                                      : uploadingImage.status === 'completed'
+                                      ? 'bg-green-500'
+                                      : 'bg-[#f84f39]'
+                                  }`}
+                                  style={{ width: `${uploadingImage.progress}%` }}
+                                ></div>
                               </div>
+                              <span className="text-xs text-gray-500">
+                                {uploadingImage.status === 'error' 
+                                  ? 'Failed' 
+                                  : uploadingImage.status === 'completed'
+                                  ? 'Done'
+                                  : `${uploadingImage.progress}%`
+                                }
+                              </span>
                             </div>
-                            {uploadImg.status === 'uploading' && (
-                              <Loader className="w-4 h-4 text-[#f84f39] animate-spin" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeUploadingImage(uploadImg.id)}
-                              className="text-red-500 hover:text-red-700 transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
                           </div>
-                        ))}
+                          {uploadingImage.status === 'uploading' && (
+                            <Loader className="w-4 h-4 text-[#f84f39] animate-spin" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={removeUploadingImage}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
                   
-                  {/* Uploaded Images */}
-                  {images.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-gray-700">Project Images ({images.length})</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {images.map((image, index) => (
-                          <div key={index} className="relative group">
-                            <img 
-                              src={image} 
-                              alt={`Project image ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                              onError={(e) => {
-                                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(image)}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                  {/* Project Image Preview */}
+                  {projectImage && (
+                    <div className="relative group w-80">
+                      <img 
+                        src={projectImage} 
+                        alt="Project profile image"
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -508,23 +558,23 @@ const SubmitProject = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={loading || uploadingImages.some(img => img.status === 'uploading')}
+                disabled={loading || uploadingImage}
                 className="w-full bg-[#f84f39] text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-[#d63027] focus:outline-none focus:ring-2 focus:ring-[#f84f39] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Submitting...
+                    {isEditMode ? 'Updating...' : 'Submitting...'}
                   </>
-                ) : uploadingImages.some(img => img.status === 'uploading') ? (
+                ) : uploadingImage ? (
                   <>
                     <Loader className="w-5 h-5 animate-spin" />
-                    Uploading Images...
+                    Uploading Image...
                   </>
                 ) : (
                   <>
                     <Send className="w-5 h-5" />
-                    Submit Project
+                    {isEditMode ? 'Update Project' : 'Submit Project'}
                   </>
                 )}
               </motion.button>

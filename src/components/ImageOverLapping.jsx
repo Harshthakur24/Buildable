@@ -1,4 +1,3 @@
-import React from 'react';
 import { ImagesForOL } from '../../constants';
 
 const ImageOverLapping = () => {

@@ -3,13 +3,21 @@ import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Github, Twitter, Globe, Camera, Save } from 'lucide-react'
+import { ArrowLeft, Github, Twitter, Globe, Camera, Save, Pencil, Trash2, Star, Rocket, Plus } from 'lucide-react'
 import { api } from '../utils/api'
+import { uploadToCloudinary } from '../utils/cloudinary'
+import { projectsAPI } from '../utils/api'
+import toast from 'react-hot-toast'
 
 const Profile = () => {
   const { user, updateUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [userProjects, setUserProjects] = useState([])
+  const [projectsLoading, setProjectsLoading] = useState(true)
+  const [initialValues, setInitialValues] = useState({}) // Track initial form values
 
   const {
     register,
@@ -21,24 +29,81 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setValue('name', user.name || '')
-      setValue('bio', user.bio || '')
-      setValue('avatar', user.avatar || '')
-      setValue('github', user.github || '')
-      setValue('website', user.website || '')
-      setValue('twitter', user.twitter || '')
+      const initialData = {
+        name: user.name || '',
+        bio: user.bio || '',
+        avatar: user.avatar || '',
+        github: user.github || '',
+        website: user.website || '',
+        twitter: user.twitter || ''
+      }
+      
+      // Set form values
+      Object.keys(initialData).forEach(key => {
+        setValue(key, initialData[key])
+      })
+      
+      // Store initial values for comparison
+      setInitialValues(initialData)
     }
   }, [user, setValue])
+
+  // Fetch user's projects
+  useEffect(() => {
+    const fetchUserProjects = async () => {
+      try {
+        setProjectsLoading(true)
+        const response = await projectsAPI.getProjects({ userId: user?.id })
+        setUserProjects(response.data || [])
+      } catch (err) {
+        console.error('Failed to fetch user projects:', err)
+        toast.error('Failed to load your projects')
+      } finally {
+        setProjectsLoading(false)
+      }
+    }
+
+    if (user?.id) {
+      fetchUserProjects()
+    }
+  }, [user?.id])
 
   const onSubmit = async (data) => {
     try {
       setLoading(true)
       setMessage('')
       
-      const response = await api.put('/auth/profile', data)
+      // First, sanitize all form data to ensure no null/undefined values
+      const sanitizedData = {}
+      Object.keys(data).forEach(key => {
+        const value = data[key]
+        sanitizedData[key] = (value === null || value === undefined || value === '') ? '' : String(value).trim()
+      })
+      
+      // Only send fields that have changed (comparing sanitized values)
+      const changedFields = {}
+      Object.keys(sanitizedData).forEach(key => {
+        const currentValue = sanitizedData[key]
+        const initialValue = initialValues[key] || ''
+        if (currentValue !== initialValue) {
+          changedFields[key] = currentValue
+        }
+      })
+
+      
+      // If no fields changed, don't make API call
+      if (Object.keys(changedFields).length === 0) {
+        setMessage('No changes to save')
+        setTimeout(() => setMessage(''), 3000)
+        return
+      }
+      
+      const response = await api.put('/auth/profile', changedFields)
       
       if (response.data.success) {
         updateUser(response.data.data)
+        // Update initial values with new data
+        setInitialValues(prev => ({ ...prev, ...changedFields }))
         setMessage('Profile updated successfully!')
         setTimeout(() => setMessage(''), 3000)
       }
@@ -47,6 +112,51 @@ const Profile = () => {
       setTimeout(() => setMessage(''), 5000)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    try {
+      setUploadingImage(true)
+      setUploadProgress(0)
+
+      const result = await uploadToCloudinary(file, (progress) => {
+        setUploadProgress(progress)
+      })
+
+      setValue('avatar', result.url)
+      
+      // Only send the avatar field that changed
+      const response = await api.put('/auth/profile', { avatar: result.url })
+      
+      if (response.data.success) {
+        updateUser(response.data.data)
+        // Update initial values
+        setInitialValues(prev => ({ ...prev, avatar: result.url }))
+        toast.success('Profile picture updated successfully!')
+      }
+    } catch (error) {
+      console.error('Upload failed:', error)
+      toast.error('Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+      setUploadProgress(0)
+    }
+  }
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('Are you sure you want to delete this project?')) return
+
+    try {
+      await projectsAPI.deleteProject(projectId)
+      setUserProjects(projects => projects.filter(p => p.id !== projectId))
+      toast.success('Project deleted successfully')
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      toast.error('Failed to delete project')
     }
   }
 
@@ -128,20 +238,37 @@ const Profile = () => {
                         {user?.name?.charAt(0) || 'U'}
                       </span>
                     </div>
-                    <div className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg border border-gray-200">
-                      <Camera className="w-4 h-4 text-[#72718a]" />
-                    </div>
+                    <label className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+                      {uploadingImage ? (
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-[#f84f39] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : (
+                        <Camera className="w-4 h-4 text-[#72718a]" />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                      />
+                    </label>
                   </div>
                   
-                  <input
-                    type="url"
-                    {...register('avatar')}
-                    placeholder="Enter image URL"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f84f39] focus:border-transparent text-center text-sm"
-                  />
-                  <p className="text-xs text-[#72718a] mt-2 text-center">
-                    Enter a URL to your profile picture
-                  </p>
+                  {uploadingImage && (
+                    <div className="w-full mt-2">
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-[#f84f39] transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-center text-[#72718a] mt-1">
+                        Uploading... {uploadProgress.toFixed(0)}%
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -279,6 +406,130 @@ const Profile = () => {
               </div>
             </motion.div>
           </div>
+
+          {/* My Projects Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mt-12"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold text-[#26253b]">My Projects</h2>
+              <Link
+                to="/submit-project"
+                className="flex items-center bg-[#f84f39] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#d63027] transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Submit New Project
+              </Link>
+            </div>
+
+            {projectsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+                    <div className="h-48 bg-gray-200"></div>
+                    <div className="p-5">
+                      <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : userProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {userProjects.map((project) => (
+                  <motion.div
+                    key={project.id}
+                    className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
+                    whileHover={{ y: -5 }}
+                  >
+                    <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
+                      {(project.profileImage || project.image) ? (
+                        <img 
+                          src={project.profileImage || project.image} 
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-4xl">🚀</div>
+                        </div>
+                      )}
+                      <div className="absolute top-4 right-4 flex gap-2">
+                        <Link
+                          to={`/submit-project?edit=${project.id}`}
+                          className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <Pencil className="w-4 h-4 text-[#f84f39]" />
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteProject(project.id)}
+                          className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                                           <div className="p-6">
+                         <h3 className="text-xl font-bold text-[#26253b] mb-2">{project.title}</h3>
+                         <p className="text-[#72718a] text-sm mb-4 line-clamp-2">{project.description}</p>
+                         
+                         {/* Tech Stack */}
+                         {project.techStack && project.techStack.length > 0 && (
+                           <div className="flex flex-wrap gap-1 mb-3">
+                             {project.techStack.slice(0, 3).map((tech, index) => (
+                               <span 
+                                 key={index}
+                                 className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md font-medium"
+                               >
+                                 {tech}
+                               </span>
+                             ))}
+                             {project.techStack.length > 3 && (
+                               <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
+                                 +{project.techStack.length - 3}
+                               </span>
+                             )}
+                           </div>
+                         )}
+                         
+                         <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                             <div className="flex items-center">
+                               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                               <span className="ml-1 font-semibold">{project.averageRating?.toFixed(1) || '0.0'}</span>
+                             </div>
+                             <span className="text-sm text-[#72718a]">({project.totalRatings || 0} ratings)</span>
+                           </div>
+                           <Link
+                             to={`/projects/${project.id}`}
+                             className="text-[#f84f39] text-sm font-medium hover:underline"
+                           >
+                             View Details →
+                           </Link>
+                         </div>
+                       </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Rocket className="w-8 h-8 text-[#72718a]" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#26253b] mb-2">No Projects Yet</h3>
+                <p className="text-[#72718a] mb-6">Share your amazing work with the community</p>
+                <Link
+                  to="/submit-project"
+                  className="bg-[#f84f39] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#d63027] transition-colors"
+                >
+                  Submit Your First Project
+                </Link>
+              </div>
+            )}
+          </motion.div>
         </motion.div>
       </div>
     </div>

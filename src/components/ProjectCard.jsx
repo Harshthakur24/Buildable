@@ -8,10 +8,11 @@ const ProjectCard = ({ project, onRate }) => {
   const [isHovered, setIsHovered] = useState(false)
   const [showRating, setShowRating] = useState(false)
   
-  // Calculate average rating
-  const avgRating = project.ratings?.length > 0 
-    ? project.ratings.reduce((sum, r) => sum + r.rating, 0) / project.ratings.length
-    : 0
+  // Calculate average rating - handle both old and new data structures
+  const avgRating = project.averageRating || 
+    (project.ratings?.length > 0 
+      ? project.ratings.reduce((sum, r) => sum + r.rating, 0) / project.ratings.length
+      : 0)
     
   // Get category info
   const category = ProjectCategories.find(cat => 
@@ -53,9 +54,10 @@ const ProjectCard = ({ project, onRate }) => {
     >
       {/* Project Image/Preview */}
       <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-        {project.image ? (
+        {/* Project profile image */}
+        {(project.profileImage || project.image) ? (
           <img 
-            src={project.image} 
+            src={project.profileImage || project.image} 
             alt={project.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             onError={(e) => {
@@ -67,7 +69,7 @@ const ProjectCard = ({ project, onRate }) => {
         
         {/* Fallback for missing/broken images */}
         <div 
-          className={`absolute inset-0 flex items-center justify-center ${project.image ? 'hidden' : 'flex'}`}
+          className={`absolute inset-0 flex items-center justify-center ${(project.profileImage || project.image) ? 'hidden' : 'flex'}`}
           style={{ background: `linear-gradient(135deg, ${category.color}20, ${category.color}40)` }}
         >
           <div 
@@ -169,7 +171,7 @@ const ProjectCard = ({ project, onRate }) => {
             </div>
             <div className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              <span>{project.ratings?.length || 0}</span>
+              <span>{project.totalRatings || project.ratings?.length || 0}</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -181,10 +183,10 @@ const ProjectCard = ({ project, onRate }) => {
         {/* Author and Rating */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {project.user?.avatar ? (
+            {(project.author?.avatar || project.user?.avatar) ? (
               <img 
-                src={project.user.avatar} 
-                alt={project.user.name}
+                src={project.author?.avatar || project.user?.avatar} 
+                alt={project.author?.name || project.user?.name}
                 className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-100"
                 onError={(e) => {
                   e.target.style.display = 'none'
@@ -193,15 +195,15 @@ const ProjectCard = ({ project, onRate }) => {
               />
             ) : null}
             <div 
-              className={`w-8 h-8 bg-gradient-to-br from-[#f84f39] to-[#6b66da] rounded-full flex items-center justify-center ${project.user?.avatar ? 'hidden' : 'flex'}`}
+              className={`w-8 h-8 bg-gradient-to-br from-[#f84f39] to-[#6b66da] rounded-full flex items-center justify-center ${(project.author?.avatar || project.user?.avatar) ? 'hidden' : 'flex'}`}
             >
               <span className="text-white text-xs font-bold">
-                {project.user?.name?.charAt(0) || 'U'}
+                {(project.author?.name || project.user?.name)?.charAt(0) || 'U'}
               </span>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                {project.user?.name || 'Anonymous'}
+                {project.author?.name || project.user?.name || 'Anonymous'}
               </p>
             </div>
           </div>

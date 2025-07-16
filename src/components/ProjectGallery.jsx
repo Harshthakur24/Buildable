@@ -78,11 +78,7 @@ const ProjectGallery = ({ projects = [], onProjectRate, loading = false, error =
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Developer Projects</h2>
-        <p className="text-gray-600">Discover amazing projects built by the community</p>
-      </div>
+     
 
       {/* Error State */}
       {error && !loading && (
@@ -129,6 +125,11 @@ const ProjectGallery = ({ projects = [], onProjectRate, loading = false, error =
       {/* Content - Only show when not loading and no error */}
       {!loading && !error && (
         <>
+         {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Your Projects</h2>
+        <p className="text-gray-600">These are the amazing projects built by you</p>
+      </div>
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             {/* Category Filter */}
@@ -162,7 +163,7 @@ const ProjectGallery = ({ projects = [], onProjectRate, loading = false, error =
             </div>
 
             {/* Sort Options */}
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Sort by:</span>
               <select
                 value={sortBy}
